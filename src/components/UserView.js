@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
 import firebaseApp from "../firebase/credenciales";
+import { getAuth,updatePassword, EmailAuthProvider, reauthenticateWithCredential  } from "firebase/auth";
 
 import { getFirestore, doc, setDoc, getDoc ,getDocs, collection} from "firebase/firestore";
 import { useAuth } from '../screens/Login'
+const auth = getAuth(firebaseApp);
 
 function UserView() {
   const [clubs, setClubs] = useState([]);
@@ -65,7 +67,7 @@ function UserView() {
       setPdfFile(null);
     }
   };
-
+/* DADO EL NOMBRE DEL CLUB TRAE LOS DATOS DE ESE CLUB  */
   async function getClubes(nombre_club) {
     const club = doc(firestore, "clubes", nombre_club);
     const clubb = await getDoc(club);
@@ -76,97 +78,69 @@ function UserView() {
       console.log("No such CLUB!");
     }
   }
+
+  /* MUESTRA TODOS LOS CLUBES EN LA PANTALLA */
   async function getAllClubes() {
     const clubesCollection = collection(firestore, "clubes");
     const clubesSnapshot = await getDocs(clubesCollection);
     const clubesList = clubesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     setClubs(clubesList);
   }
+  /* --------------------------------------------------------------------- */
 
- 
+/* 2 FUNCIONES PARA CAMBIAR LA CONTRASEÑA LUEGO 
+HAY QUE INTRODUCIR MAIL Y CONTRASEÑA ACUTALES PARA COMBIAR DE CONTRASEÑA */
+  async function cambiarPassword(nuevaPassword) {
+    const user = auth.currentUser;
+    console.log(user.email)
+  
+    if (user) {
+      try {
+        await updatePassword(user, nuevaPassword);
+        alert("Contraseña actualizada correctamente");
+      } catch (error) {
+        console.error("Error al actualizar la contraseña:", error);
+        alert("Error al actualizar la contraseña");
+      }
+    } else {
+      alert("No hay usuario autenticado");
+    }
+  }
+  
 
+  
+  async function reauthenticateUser(email, currentPassword) {
+    const user = auth.currentUser;
+    const credential = EmailAuthProvider.credential(email, currentPassword);
+    try {
+      await reauthenticateWithCredential(user, credential);
+      alert("Reautenticación exitosa");
+      return true;
+    } catch (error) {
+      console.error("Error al reautenticar el usuario:", error);
+      alert("Error al reautenticar el usuario");
+      return false;
+    }
+  }
+/* --------------------------------------------------------------------- */
   useEffect(() => {
     getAllClubes();
   }, []);
   return (
   
+    
     <div>
+       <button onClick={async () => {
+        const email = prompt("Introduce tu correo electrónico:");
+        const currentPassword = prompt("Introduce tu contraseña actual:");
+        const nuevaPassword = prompt("Introduce la nueva contraseña:");
+        const reauthenticated = await reauthenticateUser(email, currentPassword);
+        if (reauthenticated && nuevaPassword) {
+          cambiarPassword(nuevaPassword);
+        }
+      }}>Cambiar Contraseña</button>
+     
 
-      <h1>Ingreso de clubes</h1>
-      <form onSubmit={submitHandler}>
-      
-        <label>
-          Nombre del club:
-          <input type="text" id="nombre_club" />
-        </label>
-
-        <label>
-          RUC:
-          <input type="text" id="ruc" />
-        </label>
-
-        <label>
-          Presidente:
-          <input type="text" id="presidente" />
-        </label>
-
-        <label>
-          Delegado:
-          <input type="text" id="delegado" />
-        </label>
-
-        <label>
-          Provincia:
-          <input type="text" id="provincia" />
-        </label>
-
-        <label>
-          Ciudad:
-          <input type="text" id="ciudad" />
-        </label>
-
-        <label>
-          Telefono:
-          <input type="text" id="telefono" />
-        </label>
-
-        <h1>Registro de directorio PDF</h1>
-
-        <input
-          type="file"
-          name="registro_directorio"          accept="application/pdf"
-          onChange={handleFileChange}
-        />
-        
-        <h1>Acuerdo ministerial PDF</h1>
-
-        <input
-          type="file"
-          name="acuerdo_ministerial"
-          accept="application/pdf"
-          onChange={handleFileChange}
-        />
-         <label>
-          Correo:
-          <input type="text" id="correo" />
-        </label>
-        <label>
-          Estado:
-          <input type="text" id="estado" />
-        </label>
-
-        {errorMessage && <p style={{ color: "red" }}>{errorMessage}</p>}
-
-        {/* <input type="submit" value="GUARDAR" /> */}
-        {/* <button type="text" onClick={() => getClubes()}>
-          ver club
-        </button> */}
-         <button type="submit" >
-          Guardar club
-        </button>
-      
-        {/* <button onClick={getClubes}>Ver clubes</button> */}
-      </form>
       <h1>Listado de clubes</h1>
       <button onClick={() => getClubes(prompt("Introduce el nombre del club:"))}>
         Ver club
